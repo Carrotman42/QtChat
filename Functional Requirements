@@ -1,0 +1,34 @@
+Dave Kindel
+Rajat Gupta
+Kevin Malachowski
+
+Final Project Functional Requirements
+
+•	The final project for our group will consist of client server chat room. 
+•	The project will have a multi-threaded sever design to connect with several clients at once
+•	Each client will have its own GUI which will display messages from all users, the custom message the user wishes to send, and send and quit push buttons. 
+•	The messages will be written into a socket which will be processed by the server. 
+•	The sever will thus handle all incoming messages and broadcast them to all connected clients
+•	The client and server will be modeled after assignment 7
+•	Each user will observe the following GUI after connecting to the server:
+
+
+
+
+
+
+
+
+Testing:
+
+- Client:
+  Test 1: Write to a sever, and have the server print the message
+  Test 2: Recieve and print message from a server
+  Test 3: Quitting and closing the client properly
+  Test 4: Client signals server when quitting so quit messages captured by the server
+  
+- Server
+  Test 1:
+
+
+

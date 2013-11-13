@@ -2,12 +2,18 @@
 
 Implementation Requirements
 ===========
+
 Kevin: Server
+------------
  * class chatserver
  * class session
+ 
 Dave: Client GUI
+------------
  * class clientGUI
+ 
 Rajat: Client backend
+------------
  * class client
 
 Test assignments:

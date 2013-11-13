@@ -16,16 +16,12 @@ Q_OBJECT
 
 public:
     /**
-     * Creates a new session based on the given descriptor. This takes care of
-     * making a new thread and assigning the new session to the thread as well
-     * as mapping the correct signals/slots so that when the connection ends
-     * the thread will end.
+     * Creates a new session object.
      *
-     * \param socketDescriptor The file descriptor for the client connection.
-     * \param db The database object to use.
-     * \returns The new session object.
+     * \param sockDescr The file descriptor for the connection.
+     * \param desc A number to uniquely identify this session
      */
-    static session* createSession(int socketDescriptor);
+    session(int sockDescr, int desc);
 
     /**
      * Destructor for the session class. Quits the thread to which the
@@ -38,6 +34,7 @@ private slots:
      * Connected to the disconnected signal of the session's socket
      */
     void sockDisconnected();
+    
     /**
      * Connected to the error signal of the session's socket
      *
@@ -52,13 +49,6 @@ private slots:
 
 private:
     /**
-     * Creates a new session object.
-     *
-     * \param sockDescr The file descriptor for the connection.
-     */
-    session(int sockDescr);
-
-    /**
      * Sends a message to the connected client. Automatically appends a newline.
      *
      * Will emit the clientError signal if there was an issue sending the message.
@@ -71,25 +61,33 @@ signals:
     /**
      * Emitted when this session receives a logon attempt.
      *
+     * \param desc The unique identifier for this session
      * \param name The name of the user who wants to log in
      */
-    void recvLogin(QString name);
+    void recvLogin(int desc, QString name);
     
     /**
      * Emitted when this user sends a message.
      *
-     * \param name Name of the user
+     * \param desc The unique identifier for this session
      * \param msg Message they sent
      */
-    void recvMsg(QString name, QString msg);
+    void recvMsg(int desc, QString msg);
     
     /**
      * Emitted when this user changes their status
      *
-     * \param name Name of the user
+     * \param desc The unique identifier for this session
      * \param status Their updated status
      */
-    void recvStatus(QString name, QString status);
+    void recvStatus(int desc, QString status);
+    
+    /**
+     * Emit when the client disconnects (or leaves) the chatroom.
+     *
+     * \param desc The unique identifier for this session
+     */
+    void clientDisconnected(int desc);
     
 public slots:
     /**
@@ -97,7 +95,7 @@ public slots:
      *
      * \param response A pre-formatted command to send to this client.
      */
-    void sendResponse(QString response);
+    void sendResponse(QByteArray response);
 
 private:
     /**
@@ -106,9 +104,9 @@ private:
     QTcpSocket sock;
     
     /**
-     * The name the user has logged in with
+     * The unique identifier given at construction
      */
-    QString name;
+    int desc;
 };
 
 #endif

@@ -34,7 +34,7 @@ SHOW THE IMAGE HERE!
 Client->Server
 <table>
 <tr><th>Command</th><th>Args</th><th>Description</th></tr>
-<tr><td>LOGIN</td><td>name</td><td>Gives a name to the given user. This must be done before sending any other commands. Not doing so will cause the server to simply return error messages. The name may not contain a newline nor a zero byte.</td></tr>
+<tr><td>LOGIN</td><td>name</td><td>Gives a name to the given user. This must be done before sending any other commands. Not doing so will cause the server to simply return error messages. The name may not contain a newline nor a zero byte and must be at least 1 character long.</td></tr>
 <tr><td>MSG</td><td>message-contents</td><td>Send a message to the chatroom. This will cause the message to be broadcasted to everyone currently in the chatroom. This may not contain a newline.</td></tr>
 <tr><td>STATUS</td><td>status-contents</td><td>Set your status. Will be reported along with your name in the list of people in the chatroom. This may not contain a newline nor a zero byte.</td></tr>
 </table>

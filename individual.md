@@ -1,6 +1,5 @@
 
-
-Implementation Requirements
+Individual Requirements
 ===========
 
 Kevin: Server

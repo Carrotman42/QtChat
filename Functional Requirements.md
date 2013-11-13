@@ -55,6 +55,15 @@ Testing:
   - Test 1: Generate Connect key press event - catch that it's handled.
   - Test 2: Generate Quit key press event - catch that it's handled.
   - Test 3: Generate Send Message key press event - catch that it's handled.
+  - Test 4: Emit sendConenctInfo() correctly - make sure proper arguments are caught
+  - Test 5: Emit sendMsg() correctly - make sure proper arguments are caught
+  - Test 6: Emit quitServer() correctly
+  - Test 7: Emit updateStatus() correctly - make sure proper arguments are caught
+  - Test 8: Make sure that wasConnected() was caught properly.
+  - Test 9: Make sure that gotMessage() was caught properly.
+  - Test 10: Make sure that updateList() was caught properly.
+  - Test 11: Make sure that onServerDisconnect() was caught properly.
+  - Test 12: Make sure that caughtError() was caught properly.
   
 
 - Client:

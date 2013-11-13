@@ -34,18 +34,15 @@ SHOW THE IMAGE HERE!
 Client->Server
 <table>
 <tr><th>Command</th><th>Args</th><th>Description</th></tr>
-<tr><td>LOGIN</td><td>name</td><td>Gives a name to the given user. This must be done before sending any other commands. Not doing so will cause the server to simply return error messages. The name may not contain a newline nor a colon.</td></tr>
+<tr><td>LOGIN</td><td>name</td><td>Gives a name to the given user. This must be done before sending any other commands. Not doing so will cause the server to simply return error messages. The name may not contain a newline nor a zero byte.</td></tr>
 <tr><td>MSG</td><td>message-contents</td><td>Send a message to the chatroom. This will cause the message to be broadcasted to everyone currently in the chatroom. This may not contain a newline.</td></tr>
-<tr><td>STATUS</td><td>status-contents</td><td>Set your status. Will be reported along with your name in the list of people in the chatroom. This may not contain a newline nor a zero byte ('\0').</td></tr>
-<tr><td>LIST</td><td>{none}</td><td>Requests a list of users in the chatroom along with their statuses.</td></tr>
+<tr><td>STATUS</td><td>status-contents</td><td>Set your status. Will be reported along with your name in the list of people in the chatroom. This may not contain a newline nor a zero byte.</td></tr>
 </table>
 
 Server->Client
 <table>
 <tr><th>Command</th><th>Args</th><th>Description</th></tr>
-<tr><td>ENTER</td><td>name</td><td>Notifies users about a user entering the chatroom.</td></tr>
-<tr><td>MSG</td><td>FROM message-contents</td><td>Notifies users about a user sending a message to the chatroom</td></tr>
-<tr><td>STATUS</td><td>FROM status-contents</td><td>Notifies users about a user changing their status</td></tr>
+<tr><td>MSG</td><td>FROM\0message-contents</td><td>Notifies users about a user sending a message to the chatroom</td></tr>
 <tr><td>LIST</td><td>user1\0status1\0user2\0status2\0...\0userN\0statusN</td><td>Represents a list of users currently in the chatroom along with their current statuses. Note that the `\0' in the args is the zero byte and is used to delimit statuses and users.</td></tr>
 <tr><td>ERROR</td><td>description</td><td>Represents some sort of error from a client command. The description will describe what's up</td></tr>
 </table>
@@ -67,26 +64,19 @@ Testing:
   - Test 4: Client signals server when quitting so quit messages captured by the server
   
 - Server: Use straight sockets to mock clients
-  - Test 1: Test ENTER
+  - Test 1: Test LOGIN
     * Socket 1 connects but does not log in
     * Socket 2 connects and logs in: Socket 1 should not receive any information
-    * Socket 1 logs in: Socket 2 should receive login message
+    * Socket 1 logs in: Socket 2 should receive a LIST with the fact that both socket 1 and 2 are in the chatroom.
   - Test 2: Test MSG
     * Socket 1 and 2 connect and log in
     * Socket 1 sends a message: Socket 2 should receive the message
   - Test 3: Test STATUS
     * Socket 1 and 2 connect and log in
-    * Socket 1 sends a status update: Socket 2 should receive the status update
-  - Test 4: Test LIST
-    * Socket 1 and 2 connect and log in
-    * Socket 1 requests a list: Socket 1 should receive a correct list, while socket 2 should receive nothing
-  - Test 5: Test LIST with statuses
-    * Socket 1 and 2 connect and log in
-    * Socket 2 sets status
-    * Socket 1 requests a list: Socket 1 should receive a correct list with the correct status reported, while socket 2 should receive nothing
-  - Test 6: Test ERROR before login
+    * Socket 1 sends a status update: Socket 2 should receive the status update in a LIST 
+  - Test 4: Test ERROR before login
     * Socket 1 connects
-    * Socket 1 sends MSG, STATUS, LIST: Should receive error codes each time
-  - Test 7: Test ERROR for malformed commands
+    * Socket 1 sends MSG, STATUS: Should receive error codes each time
+  - Test 5: Test ERROR for malformed commands
     * Socket 1 connects and logs in
     * Socket 1 sends various malformed/invalid commands: Should receive an error response each time.

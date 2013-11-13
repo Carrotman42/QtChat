@@ -67,10 +67,24 @@ Testing:
   
 
 - Client:
-  - Test 1: Write to a sever, and have the server print the message
-  - Test 2: Recieve and print message from a server
-  - Test 3: Quitting and closing the client properly
-  - Test 4: Client signals server when quitting so quit messages captured by the server
+  - Test 1: Test slot sendMsg
+    * Check output from dummy socket for correctly formatted command
+  - Test 2: Test slot quitFromServer
+    * Check that socket was closed
+  - Test 3: Test slot login
+    * Check output from dummy socket for correctly formatted command
+  - Test 4: Test slot status
+    * Check output from dummy socket for correctly formatted command
+  - Test 5: Test signal sendError
+    * Check to make sure the signal is emitted when ERROR is received
+  - Test 6: Test signal newMessage
+    * Check to make sure the signal is emitted when MSG is received
+  - Test 7: Test signal listUpdate
+    * Check to make sure the signal is emitted when LIST is received
+  - Test 8: Test signal connected
+    * Check to make sure the signl is emitted when connecting
+  - Test 9: Test signal sendServerDisconnect
+    * Check to make sure the signal is emitted when the remote socket is closede server
   
 - Server: Use straight sockets to mock clients
   - Test 1: Test LOGIN

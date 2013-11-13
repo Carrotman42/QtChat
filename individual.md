@@ -14,21 +14,30 @@ Test assignments:
 ===========
  * Kevin:
   - Server Test 1: Test LOGIN
-    * Socket 1 connects but does not log in
-    * Socket 2 connects and logs in: Socket 1 should not receive any information
-    * Socket 1 logs in: Socket 2 should receive a LIST with the fact that both socket 1 and 2 are in the chatroom.
   - Server Test 2: Test MSG
-    * Socket 1 and 2 connect and log in
-    * Socket 1 sends a message: Socket 2 should receive the message
   - Server Test 3: Test STATUS
-    * Socket 1 and 2 connect and log in
-    * Socket 1 sends a status update: Socket 2 should receive the status update in a LIST 
   - Server Test 4: Test ERROR before login
-    * Socket 1 connects
-    * Socket 1 sends MSG, STATUS: Should receive error codes each time
   - Server Test 5: Test ERROR for malformed commands
-    * Socket 1 connects and logs in
-    * Socket 1 sends various malformed/invalid commands: Should receive an error response each time.
  * Dave:
- 
+  - Client GUI Test 1: Generate Connect key press event - catch that it's handled.
+  - Client GUI Test 2: Generate Quit key press event - catch that it's handled.
+  - Client GUI Test 3: Generate Send Message key press event - catch that it's handled.
+  - Client GUI Test 4: Emit sendConenctInfo() correctly - make sure proper arguments are caught
+  - Client GUI Test 5: Emit sendMsg() correctly - make sure proper arguments are caught
+  - Client GUI Test 6: Emit quitServer() correctly
+  - Client GUI Test 7: Emit updateStatus() correctly - make sure proper arguments are caught
+  - Client GUI Test 8: Make sure that wasConnected() was caught properly.
+  - Client GUI Test 9: Make sure that gotMessage() was caught properly.
+  - Client GUI Test 10: Make sure that updateList() was caught properly.
+  - Client GUI Test 11: Make sure that onServerDisconnect() was caught properly.
+  - Client GUI Test 12: Make sure that caughtError() was caught properly.
  * Rajat:
+  - Client Test 1: Test slot sendMsg
+  - Client Test 2: Test slot quitFromServer
+  - Client Test 3: Test slot login
+  - Client Test 4: Test slot status
+  - Client Test 5: Test signal sendError
+  - Client Test 6: Test signal newMessage
+  - Client Test 7: Test signal listUpdate
+  - Client Test 8: Test signal connected
+  - Client Test 9: Test signal sendServerDisconnect

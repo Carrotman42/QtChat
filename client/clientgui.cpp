@@ -1,9 +1,5 @@
 #include "clientgui.h"
 
-//#define testing
-
-
-
 
 clientGUI::clientGUI(QWidget *parent) :
     QDialog(parent)

@@ -210,8 +210,20 @@ private slots:
      */
     void quitButtonPushed();
 
+    /**
+     * @brief enableConnectButton Enables the connect button if it should be enabled.
+     *
+     * Tests if the Connect button should be enabled by checking the contents of the
+     * member line edits.  Then it enables it if necessary.
+     */
     void enableConnectButton();
 
+    /**
+     * @brief enableSendButton Enables the send button if it should be enabled.
+     *
+     * Tests if the new message window has information typed in.  If it does, it enables
+     * the button.
+     */
     void enableSendButton();
 
 
@@ -250,8 +262,23 @@ private:
      */
     void tearDownChatPage();
 
+    /**
+     * @brief postMessageToWindow Posts the sent the message sent by user to window
+     *
+     * If sent by this user, user is displayed in red.  Everyone else is in blue.
+     * @param window the window to post to
+     * @param user the user sending the message
+     * @param message the message that was sent
+     */
     void postMessageToWindow(QTextEdit* window, QString user, QString message);
 
+    /**
+     * @brief postError Posts the error to the GUI.
+     *
+     * If the GUI is in the connections page, errors are posted to the status label.
+     * If it's in the chat room, errors are posted in grey to the message window
+     * @param errorMessage The message to post
+     */
     void postError(QString errorMessage);
 
     QLabel *hostLabel; /**< The label "Server Name:" */
@@ -270,8 +297,8 @@ private:
     QTextEdit *userWindow; /**< Contains all the usernames and statuses */
     QTextEdit *newMessageWindow; /**< Contains the message the will be sent by this user */
 
-    bool isConnectionsPage;
-    QString user;
+    bool isConnectionsPage; /**< true if the connection page is active.  false if the chat page is active*/
+    QString user; /**< The user name chosen - used to display different colors in the windows */
 
 
 };

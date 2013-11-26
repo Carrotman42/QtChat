@@ -1,8 +1,10 @@
 HEADERS += \
-    client.h
+    client.h \
+    clientgui.h
 
 SOURCES += \
     main.cpp \
-    client.cpp
+    client.cpp \
+    clientgui.cpp
 
 QT +=network

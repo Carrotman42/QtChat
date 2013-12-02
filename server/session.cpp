@@ -39,7 +39,7 @@ session::~session()
 
 void session::gotClientMessage()
 {
-    qDebug() << "Got client message";
+    qDebug() << "Got client me";
     char message[1024];
 
     int lenRead;
@@ -64,27 +64,30 @@ void session::gotClientMessage()
     qDebug() << "Got message: " << msg;
     
     int space = msg.indexOf(' ');
+    QString command;
+    QString params;
     if (space == -1) {
-        // no command found
-        qDebug() << "No space found!";
-        return;
+        command = msg;
+    } else {
+        command = msg.left(space);
+        params = msg.mid(space + 1);
     }
 
-    QString command = msg.left(space - 1);
-    QString params = msg.mid(space + 1);
-    if (command.compare("login", Qt::CaseInsensitive) == 0) {
+    if (space != -1 && command.compare("login", Qt::CaseInsensitive) == 0) {
+        qDebug() << "Login: " << command;
         loggedIn = true;
         emit recvLogin(desc, params);
-    } else if (command.compare("msg", Qt::CaseInsensitive) == 0) {
+    } else if (space != -1 && command.compare("msg", Qt::CaseInsensitive) == 0) {
         emit recvMsg(desc, params);
-    } else if (command.compare(QString("status"), Qt::CaseInsensitive) == 0) {
+    } else if (space != -1 && command.compare(QString("status"), Qt::CaseInsensitive) == 0) {
         emit recvStatus(desc, params);
     } else {
         QByteArray buf;
         buf.append("ERROR Unknown command: ");
         buf.append(command);
         buf.append('\n');
-        sendResponse(buf);
+        qDebug() << buf;
+        sock.write(buf);
     }
 }
 

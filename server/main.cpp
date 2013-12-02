@@ -1,9 +1,7 @@
 
 #include <QtGui/QApplication>
-#include "dialog.h"
-
-#include "gatedb.h"
 #include <QHostAddress>
+#include "chatserver.h"
 
 /**
  * Main entry point into the application
@@ -16,11 +14,10 @@
 int main(int argc, char *argv[]) {
     QApplication app(argc, argv);
 	 
-    gateserver server;
+    chatserver server;
     if (!server.listen(QHostAddress::Any, 1123)) {
-        lbl->setText("Could not start server!");
         qDebug() << "Could not start server!";
-        return;
+        return 1;
     }
 
     qDebug() << "Server started on port" << server.serverPort();

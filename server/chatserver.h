@@ -89,6 +89,11 @@ private:
 	 * of length 0 is still considered logged in.
 	 */
 	QMap<int, NameAndStatus> statuses;
+
+    /**
+     * The next id to assign to the next session. Will increase monotonically.
+     */
+    int nextid;
 };
 
 #endif

@@ -107,6 +107,12 @@ private:
      * The unique identifier given at construction
      */
     int desc;
+
+    /**
+     * Represents whether the user has been logged in (responses are only sent if they
+     * are logged in
+     */
+    bool loggedIn;
 };
 
 #endif

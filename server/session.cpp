@@ -2,27 +2,8 @@
 #include "session.h"
 #include <QThread>
 
-session* session::createSession(int socketDescriptor, GateDB& db)
-{
-    session *sesh = new session(socketDescriptor, db);
-
-    QThread *th = new QThread;
-    sesh->moveToThread(th);
-
-    QObject::connect(&sesh->sock, SIGNAL(disconnected()), sesh, SLOT(sockDisconnected()));
-    QObject::connect(&sesh->sock, SIGNAL(error(QAbstractSocket::SocketError)),
-                     sesh, SLOT(sockError(QAbstractSocket::SocketError)));
-    QObject::connect(&sesh->sock, SIGNAL(readyRead()), sesh, SLOT(gotClientMessage()));
-
-    QObject::connect(sesh, SIGNAL(destroyed()), th, SLOT(quit()));
-    QObject::connect(th, SIGNAL(finished()), th, SLOT(deleteLater()));
-
-    th->start();
-    return sesh;
-}
-
-session::session(int socketDescriptor, GateDB& db)
-            : QObject(0), sock(this), db(db)
+session::session(int socketDescriptor, int desc)
+            : QObject(0), sock(this), desc(desc), loggedIn(false)
 {
     if (!sock.setSocketDescriptor(socketDescriptor)) {
         qDebug() << "Error setting sock descriptor!";
@@ -30,28 +11,25 @@ session::session(int socketDescriptor, GateDB& db)
     }
 
     qDebug() << "Made session on port " << sock.localPort() << " to port " << sock.peerPort();
-}
-
-QTcpSocket *session::getSocket()
-{
-    return &this->sock;
-}
-
-void session::sessionShutdown()
-{
-    this->deleteLater();
+    
+    QObject::connect(&sock, SIGNAL(disconnected()), this, SLOT(sockDisconnected()));
+    QObject::connect(&sock, SIGNAL(readyRead()), this, SLOT(gotClientMessage()));
+    QObject::connect(&sock, SIGNAL(error(QAbstractSocket::SocketError)),
+                     this, SLOT(sockError(QAbstractSocket::SocketError)));
 }
 
 void session::sockDisconnected()
 {
     qDebug() << "Socket disconnected!";
-    sessionShutdown();
+    emit clientDisconnected(desc);
+    deleteLater();
 }
 
 void session::sockError(QAbstractSocket::SocketError socketError)
 {
     qDebug() << "Socket error:" << socketError;
-    sessionShutdown();
+    emit clientDisconnected(desc);
+    deleteLater();
 }
 
 session::~session()
@@ -72,6 +50,7 @@ void session::gotClientMessage()
         // An error occurred!
         qDebug() << "An error occurred on the read of the socket. Terminating connection.";
         sock.close();
+        return;
     }
 
     // Take off the newline characters
@@ -83,79 +62,38 @@ void session::gotClientMessage()
     // Turn it into a QString for comparison convenience
     QString msg(message);
     qDebug() << "Got message: " << msg;
-
-    QString ret = executeCommand(msg);
-    sendResponse(ret);
-}
-
-QString session::executeCommand(QString cmd)
-{
-    QStringList line = cmd.split(" ", QString::SkipEmptyParts);
-    if (line.count() == 0)
-        return "No command found";
-
-    QString command = line[0];
-    if (command.compare(QString("create"), Qt::CaseInsensitive) == 0)
-        return doCreate(line);
-    else if (command.compare(QString("connect"), Qt::CaseInsensitive) == 0)
-        return doConnect(line);
-    else if (command.compare(QString("destroy"), Qt::CaseInsensitive) == 0)
-        return doDestroy(line);
-    else if (command.compare(QString("gateoutput"), Qt::CaseInsensitive) == 0)
-        return doGateOutput(line);
-
-    if (command.compare(QString("dumpgates"), Qt::CaseInsensitive) == 0) {
-        db.dumpGates();
-        return "Gates dumped to server's console";
-    } else if (command.compare(QString("dumpconnections"), Qt::CaseInsensitive) == 0) {
-        db.dumpConnections();
-        return "Connections dumped to server's console";
+    
+    int space = msg.indexOf(' ');
+    if (space == -1) {
+        // no command found
+        qDebug() << "No space found!";
+        return;
     }
 
-    // Unknown command!
-    return "Unknown command";
+    QString command = msg.left(space - 1);
+    QString params = msg.mid(space + 1);
+    if (command.compare("login", Qt::CaseInsensitive) == 0) {
+        loggedIn = true;
+        emit recvLogin(desc, params);
+    } else if (command.compare("msg", Qt::CaseInsensitive) == 0) {
+        emit recvMsg(desc, params);
+    } else if (command.compare(QString("status"), Qt::CaseInsensitive) == 0) {
+        emit recvStatus(desc, params);
+    } else {
+        QByteArray buf;
+        buf.append("ERROR Unknown command: ");
+        buf.append(command);
+        buf.append('\n');
+        sendResponse(buf);
+    }
 }
 
-QString session::doCreate(QStringList &line)
+void session::sendResponse(QByteArray response)
 {
-    if (line.count() != 2)
-        return "Malformed";
-    
-    QString name = line[1];
-
-    return db.create(line[1]);
-}
-
-QString session::doGateOutput(QStringList &line)
-{
-    if (line.count() != 2)
-        return "Malformed";
-
-    return db.gateOutput(line[1]);
-}
-
-QString session::doConnect(QStringList &line)
-{
-    if (line.count() != 3)
-        return "Malformed";
-
-    return db.connect(line[1], line[2]);
-}
-
-QString session::doDestroy(QStringList &line)
-{
-    if (line.count() != 2)
-        return "Malformed";
-
-    return db.destroy(line[1]);
-}
-
-void session::sendResponse(QString msg)
-{
-    QByteArray toWrite = (msg + "\n").toLocal8Bit();
-
-    int retcode = sock.write(toWrite);
-    if (retcode != toWrite.length()) {
-        qDebug() << "Could not respond to the client!";
+    if (loggedIn) {
+        int retcode = sock.write(response);
+        if (retcode != response.length()) {
+            qDebug() << "Could not respond to the client!";
+        }
     }
 }

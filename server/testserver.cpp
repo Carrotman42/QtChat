@@ -38,25 +38,24 @@ private slots:
     LOGIN(sock); \
     readList(sock, 0);
 
-#define LOGIN(sock) {\
-    sock.write("LOGIN "#sock "\n");\
-    sock.waitForBytesWritten(); }
+#define SEND(sock, msg) {\
+    sock.write(msg "\n"); \
+    sock.waitForBytesWritten();}
 
-#define MSG(sock, msg) {\
-    sock.write("MSG " msg "\n"); \
-    sock.waitForBytesWritten(); }
-
-#define STATUS(sock, status) {\
-    sock.write("STATUS " status "\n");\
-    sock.waitForBytesWritten(); }
+#define LOGIN(sock) SEND(sock, "LOGIN "#sock)
+#define MSG(sock, msg) SEND(sock, "MSG " msg)
+#define STATUS(sock, status) SEND(sock, "STATUS " status);
 
 #define VERIFY_NORECV(sock) { \
     qDebug() << "Ensuring that "#sock " does not recv data"; \
-    QVERIFY(!sock.waitForReadyRead(3000)); }
+    QVERIFY(!sock.waitForReadyRead(300)); }
 
 void recv(QTcpSocket& sock, QByteArray&dest) {
-    if (!sock.canReadLine()) {
-    QVERIFY(sock.waitForReadyRead(5000));
+    int tries = 0;
+    while (sock.bytesAvailable() == 0) {
+        sock.waitForReadyRead(1000);
+        tries++;
+        QVERIFY(tries < 5);
     }
     
     char buf[4096];
@@ -126,7 +125,6 @@ void TestServer::testLogin()
     VERIFY_NORECV(s1);
 
     LOGIN(s1);
-    qDebug() << "Logged in s1";
     readList(s2, &statuses);
     QCOMPARE(statuses.size(), 2);
     QVERIFY(statuses.contains("s1"));
@@ -178,12 +176,77 @@ void TestServer::testMsg()
 
 void TestServer::testStatus()
 {
+    MAKESERVER;
+
+    makeClient(s1);
+    LOGIN_BLOCK(s1);
+    makeClient(s2);
+
+    LIST st;
+    STATUS(s1, "First status");
+    readList(s1, &st);
+    VERIFY_NORECV(s2);
+    
+    LOGIN(s2);
+    readList(s1, 0);
+    readList(s2, &st);
+    QCOMPARE(st.size(), 2);
+    QVERIFY(st.contains("s1"));
+    QVERIFY(st.contains("s2"));
+    QCOMPARE(st["s1"], QString("First status"));
+    
+    STATUS(s1, "New status!");
+    readList(s2, &st);
+    QCOMPARE(st.size(), 2);
+    QVERIFY(st.contains("s1"));
+    QVERIFY(st.contains("s2"));
+    QCOMPARE(st["s1"], QString("New status!"));
+    readList(s1, &st);
+    QCOMPARE(st.size(), 2);
+    QVERIFY(st.contains("s1"));
+    QVERIFY(st.contains("s2"));
+    QCOMPARE(st["s1"], QString("New status!"));
+
+    ENDSERVER;
 }
+
+
+#define VERIFY_ERROR(sock) {\
+        QByteArray list; \
+        recv(sock, list); \
+        QCOMPARE(list.left(6), QByteArray("ERROR ")); \
+    }
+
 void TestServer::testErrorBefore()
 {
+    MAKESERVER;
+    
+    makeClient(s1);
+    MSG(s1, "Hello!");
+    VERIFY_ERROR(s1);
+    STATUS(s1, "Try again!");
+    VERIFY_ERROR(s1);
+
+    ENDSERVER;
 }
 void TestServer::testErrorMalormed()
 {
+    MAKESERVER;
+    
+    makeClient(s1);
+    SEND(s1, "LOGIN");
+    VERIFY_ERROR(s1);
+
+    LOGIN_BLOCK(s1);
+
+    SEND(s1, "supdawg");
+    VERIFY_ERROR(s1);
+    SEND(s1, "MSG");
+    VERIFY_ERROR(s1);
+    SEND(s1, "STATUS");
+    VERIFY_ERROR(s1);
+
+    ENDSERVER;
 }
 
 QTEST_MAIN(TestServer)

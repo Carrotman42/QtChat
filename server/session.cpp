@@ -72,10 +72,25 @@ void session::gotClientMessage()
         params = msg.mid(space + 1);
     }
 
-    if (space != -1 && command.compare("login", Qt::CaseInsensitive) == 0) {
-        qDebug() << "Login: " << command;
-        loggedIn = true;
-        emit recvLogin(desc, params);
+    if (command.compare("login", Qt::CaseInsensitive) == 0) {
+        if (space != -1) {
+            qDebug() << "Login: " << command;
+            loggedIn = true;
+            emit recvLogin(desc, params);
+        } else {
+            QByteArray buf;
+            buf.append("ERROR Not enough parameters to LOGIN command.");
+            buf.append('\n');
+            qDebug() << buf;
+            sock.write(buf);
+        }
+    } else if (!loggedIn) {
+        QByteArray buf;
+        buf.append("ERROR Not logged in yet; Cannot execute ");
+        buf.append(command);
+        buf.append('\n');
+        qDebug() << buf;
+        sock.write(buf);
     } else if (space != -1 && command.compare("msg", Qt::CaseInsensitive) == 0) {
         emit recvMsg(desc, params);
     } else if (space != -1 && command.compare(QString("status"), Qt::CaseInsensitive) == 0) {

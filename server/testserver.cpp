@@ -9,10 +9,25 @@ class TestServer : public QObject {
     Q_OBJECT;
    
 private slots:
+    /**
+     * Tests the LOGIN command
+     */
     void testLogin();
+    /**
+     * Tests the MSG command
+     */
     void testMsg();
+    /**
+     * Tests the STATUS command
+     */
     void testStatus();
+    /**
+     * Tests to make sure an ERROR code is sent if you try to do things before loggin in.
+     */
     void testErrorBefore();
+    /**
+     * Tests to make sure ERROR codes are sent when bad commands are sent.
+     */
     void testErrorMalormed();
 };
 

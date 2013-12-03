@@ -10,6 +10,7 @@ QByteArray makeListResponse(QMap<int, NameAndStatus> users)
     if (users.size() == 0)
         return ret;
 
+    ret.append("LIST ");
     QMap<int, NameAndStatus>::iterator it = users.begin();
     while (true) {
         ret.append(it.value().name);
@@ -23,7 +24,9 @@ QByteArray makeListResponse(QMap<int, NameAndStatus> users)
         ret.append('\0');
     }
 
+    qDebug() << "Made list response size=" << ret.length() << ": " << ret;
     ret.append('\n');
+
     return ret;
 }
 
@@ -64,6 +67,7 @@ void chatserver::userLogin(int desc, QString name)
 void chatserver::userMsg(int desc, QString msg)
 {
     QByteArray toSend;
+    toSend.append("MSG ");
     toSend.append(statuses[desc].name);
     toSend.append('\0');
     toSend.append(msg);

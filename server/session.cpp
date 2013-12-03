@@ -39,7 +39,6 @@ session::~session()
 
 void session::gotClientMessage()
 {
-    qDebug() << "Got client me";
     char message[1024];
 
     int lenRead;
@@ -94,9 +93,12 @@ void session::gotClientMessage()
 void session::sendResponse(QByteArray response)
 {
     if (loggedIn) {
+        //qDebug() << "Sending response of length" << response.length() << response;
         int retcode = sock.write(response);
         if (retcode != response.length()) {
             qDebug() << "Could not respond to the client!";
         }
+    } else {
+        //qDebug() << "Response ignored because not logged in";
     }
 }

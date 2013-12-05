@@ -1,220 +1,146 @@
+#include "client.h"
+#include <QString>
+#include <QStringList>
 
- #include <QtGui>
- #include <QtNetwork>
-
- #include "client.h"
-
- Client::Client(QWidget *parent)
- :   QDialog(parent), networkSession(0)
- {
-     hostLabel = new QLabel(tr("&Server name:"));
-     portLabel = new QLabel(tr("S&erver port:"));
-     commandLabel = new QLabel(tr("&Command: "));
-
-     // find out which IP to connect to
-     QString ipAddress;
-     QList<QHostAddress> ipAddressesList = QNetworkInterface::allAddresses();
-     // use the first non-localhost IPv4 address
-     for (int i = 0; i < ipAddressesList.size(); ++i) {
-         if (ipAddressesList.at(i) != QHostAddress::LocalHost &&
-             ipAddressesList.at(i).toIPv4Address()) {
-             ipAddress = ipAddressesList.at(i).toString();
-             break;
-         }
-     }
-     // if we did not find one, use IPv4 localhost
-     if (ipAddress.isEmpty())
-         ipAddress = QHostAddress(QHostAddress::LocalHost).toString();
-
-     hostLineEdit = new QLineEdit(ipAddress);
-     portLineEdit = new QLineEdit;
-     portLineEdit->setValidator(new QIntValidator(1, 65535, this));
-     commandLineEdit = new QLineEdit;
-
-     hostLabel->setBuddy(hostLineEdit);
-     portLabel->setBuddy(portLineEdit);
-     commandLabel->setBuddy(commandLineEdit);
-
-     statusLabel = new QLabel(tr("This requires that you run the "
-                                 "Gate Server example as well."));
-
-     sendCmdButton = new QPushButton(tr("Send Command"));
-     sendCmdButton->setDefault(true);
-     sendCmdButton->setEnabled(false);
-
-     quitButton = new QPushButton(tr("Quit"));
-
-     buttonBox = new QDialogButtonBox;
-     buttonBox->addButton(sendCmdButton, QDialogButtonBox::ActionRole);
-     buttonBox->addButton(quitButton, QDialogButtonBox::RejectRole);
-
+Client::Client(QObject *parent)
+{
      tcpSocket = new QTcpSocket(this);
 
-     connect(hostLineEdit, SIGNAL(textChanged(QString)),
-             this, SLOT(enableSendCmdButton()));
-     connect(portLineEdit, SIGNAL(textChanged(QString)),
-             this, SLOT(enableSendCmdButton()));
-     connect(commandLineEdit, SIGNAL(textChanged(QString)),
-             this, SLOT(enableSendCmdButton()));
-     connect(sendCmdButton, SIGNAL(clicked()),
-             this, SLOT(sendCmd()));
-     connect(quitButton, SIGNAL(clicked()), this, SLOT(quitFromServer()));
-     connect(quitButton, SIGNAL(clicked()), this, SLOT(close()));
      connect(tcpSocket, SIGNAL(readyRead()), this, SLOT(readResults()));
-     connect(tcpSocket, SIGNAL(error(QAbstractSocket::SocketError)),
-             this, SLOT(displayError(QAbstractSocket::SocketError)));
-     connect(tcpSocket, SIGNAL(disconnected()), this, SLOT(serverDisconnected()));
+     connect(tcpSocket, SIGNAL(error(QAbstractSocket::SocketError)), this, SLOT(catchError(QAbstractSocket::SocketError)));
+     connect(tcpSocket,SIGNAL(disconnected()), this, SLOT(serverDisconnected()));
+}
 
-     QGridLayout *mainLayout = new QGridLayout;
-     mainLayout->addWidget(hostLabel, 0, 0);
-     mainLayout->addWidget(hostLineEdit, 0, 1);
-     mainLayout->addWidget(portLabel, 1, 0);
-     mainLayout->addWidget(portLineEdit, 1, 1);
-     mainLayout->addWidget(commandLabel, 2, 0);
-     mainLayout->addWidget(commandLineEdit, 2, 1);
-     mainLayout->addWidget(statusLabel, 3, 0, 1, 2);
-     mainLayout->addWidget(buttonBox, 4, 0, 1, 2);
-     setLayout(mainLayout);
+void Client::sendMsg(QString message)
+{
+    QString command = "msg " + message;
+    sendCommand(command);
+}
 
-     setWindowTitle(tr("Gate Client"));
-     portLineEdit->setFocus();
+void Client::status(QString status)
+{
+    QString command = "status " + status;
+    sendCommand(command);
+}
 
-     QNetworkConfigurationManager manager;
-     if (manager.capabilities() & QNetworkConfigurationManager::NetworkSessionRequired) {
-         // Get saved network configuration
-         QSettings settings(QSettings::UserScope, QLatin1String("Trolltech"));
-         settings.beginGroup(QLatin1String("QtNetwork"));
-         const QString id = settings.value(QLatin1String("DefaultNetworkConfiguration")).toString();
-         settings.endGroup();
+void Client::login(QString serverName, int port, QString name)
+{
+    if(!tcpSocket->isOpen()){
+        tcpSocket->abort();
+        tcpSocket->connectToHost(serverName,port);
+        Q_ASSERT(tcpSocket->waitForConnected(5000));
+    }
 
-         // If the saved network configuration is not currently discovered use the system default
-         QNetworkConfiguration config = manager.configurationFromIdentifier(id);
-         if ((config.state() & QNetworkConfiguration::Discovered) !=
-             QNetworkConfiguration::Discovered) {
-             config = manager.defaultConfiguration();
-         }
+    QString command = "Login " + name;
+    sendCommand(command);
 
-         networkSession = new QNetworkSession(config, this);
-         connect(networkSession, SIGNAL(opened()), this, SLOT(sessionOpened()));
+    emit connected();
+}
 
-         sendCmdButton->setEnabled(false);
-         statusLabel->setText(tr("Opening network session."));
-         networkSession->open();
-     }
- }
+void Client::quitFromServer()
+{
+    tcpSocket->disconnect();
+}
 
- void Client::sendCmd()
- {
-     sendCmdButton->setEnabled(false);
-     blockSize = 0;
-     if(!tcpSocket->isOpen()){
-         tcpSocket->abort();
-         tcpSocket->connectToHost(hostLineEdit->text(),
-                                  portLineEdit->text().toInt());
-         Q_ASSERT(tcpSocket->waitForConnected(1000));
-     }
-     writeCommand(commandLineEdit->text());
-     sendCmdButton->setFocus();
- }
+void Client::sendCommand(QString msg)
+{
+    QByteArray block;
 
- void Client::writeCommand(QString cmd){
-     QByteArray block;
-     QDataStream out(&block, QIODevice::WriteOnly);
-     out.setVersion(QDataStream::Qt_4_0);
-     out << (quint16)0;
-     out << cmd;
-     out.device()->seek(0);
-     out << (quint16)(block.size() - sizeof(quint16));
+    block.append(msg);
+    block.append("\n");
 
+    tcpSocket->write(block);
+    tcpSocket->waitForBytesWritten();
+}
 
-     tcpSocket->write(block);
-     tcpSocket->waitForBytesWritten();
- }
+void Client::readResults()
+{
+        char message[1024];
 
- void Client::readResults()
- {
-     QDataStream in(tcpSocket);
-     in.setVersion(QDataStream::Qt_4_0);
+        int lenRead;
+        do {
+            lenRead = tcpSocket->readLine(message, sizeof message);
+        } while (lenRead == 0);
+        if (lenRead == -1) {
+            // An error occurred!
+            qDebug() << "An error occurred on the read of the socket. Terminating connection.";
+            tcpSocket->close();
+            return;
+        }
 
-     if (blockSize == 0) {
-         if (tcpSocket->bytesAvailable() < (int)sizeof(quint16))
-             return;
+        // Take off the newline characters
+        lenRead--;
+        while (message[lenRead] == '\n' || message[lenRead] == '\r') {
+            message[lenRead--] = 0;
+        }
 
-         in >> blockSize;
-     }
+        // Turn it into a QString for comparison convenience
+        QString msg(message);
+        qDebug() << "Got message: " << msg;
 
-     if (tcpSocket->bytesAvailable() < blockSize)
-         return;
+        int space = msg.indexOf(' ');
+        QString command;
+        QString params;
+        if (space == -1) {
+            command = msg;
+        } else {
+            command = msg.left(space);
+            params = msg.mid(space + 1);
+        }
 
-     QString results;
-     in >> results;
+        if (space != -1 && command.compare("error", Qt::CaseInsensitive) == 0) {
+            emit sendError(params);
+        }
+        else if(space != -1 && command.compare("msg", Qt::CaseInsensitive) == 0)
+        {
+            int paramBreak = msg.indexOf(QChar('\0'));
+            QString from;
+            QString message;
+            from = msg.left(space);
+            message = msg.mid(space + 1);
 
-     statusLabel->setText(results);
-     sendCmdButton->setEnabled(true);
-     sendCmdButton->setFocus();
- }
+            emit newMessage(from,message);
+        }
+        else if(space != -1 && command.compare("list", Qt::CaseInsensitive) == 0)
+        {
+            QStringList userList;
+            userList = params.split(QChar('\0'));
+            QMap<QString,QString> users;
 
- void Client::displayError(QAbstractSocket::SocketError socketError)
- {
-     switch (socketError) {
-     case QAbstractSocket::RemoteHostClosedError:
-         break;
-     case QAbstractSocket::HostNotFoundError:
-         QMessageBox::information(this, tr("Gate Client"),
-                                  tr("The host was not found. Please check the "
-                                     "host name and port settings."));
-         break;
-     case QAbstractSocket::ConnectionRefusedError:
-         QMessageBox::information(this, tr("Gate Client"),
-                                  tr("The connection was refused by the peer. "
-                                     "Make sure the gate server is running, "
-                                     "and check that the host name and port "
-                                     "settings are correct."));
-         break;
-     default:
-         QMessageBox::information(this, tr("Gate Client"),
-                                  tr("The following error occurred: %1.")
-                                  .arg(tcpSocket->errorString()));
-     }
+            for(int i; i < userList.size(); i++)
+            {
+                QString user;
+                QString status;
+                user = userList[i];
+                i++;
+                if(i < userList.size())
+                {
+                    status = userList[i];
+                }
+                users.insert(user,status);
+            }
 
-     sendCmdButton->setEnabled(true);
- }
+            emit listUpdate(users);
+        }
+        else
+        {
+            QByteArray buf;
+            buf.append("ERROR Unknown command: ");
+            buf.append(command);
+            buf.append('\n');
+            qDebug() << buf;
+        }
+}
 
- void Client::enableSendCmdButton()
- {
-     sendCmdButton->setEnabled((!networkSession || networkSession->isOpen()) &&
-                                  !hostLineEdit->text().isEmpty() &&
-                                  !portLineEdit->text().isEmpty() &&
-                                  !commandLineEdit->text().isEmpty());
+void Client::serverDisconnected()
+{
+    tcpSocket->close();
+    emit sendServerDisconnect();
+}
 
- }
-
- void Client::sessionOpened()
- {
-     // Save the used configuration
-     QNetworkConfiguration config = networkSession->configuration();
-     QString id;
-     if (config.type() == QNetworkConfiguration::UserChoice)
-         id = networkSession->sessionProperty(QLatin1String("UserChoiceConfiguration")).toString();
-     else
-         id = config.identifier();
-
-     QSettings settings(QSettings::UserScope, QLatin1String("Trolltech"));
-     settings.beginGroup(QLatin1String("QtNetwork"));
-     settings.setValue(QLatin1String("DefaultNetworkConfiguration"), id);
-     settings.endGroup();
-
-     statusLabel->setText(tr("This examples requires that you run the "
-                             "Gate Server example as well."));
-
-     enableSendCmdButton();
- }
-
- void Client::quitFromServer(){
-     tcpSocket->disconnect();
- }
-
- void Client::serverDisconnected(){
-     tcpSocket->close();
-     statusLabel->setText(tr("The server was shutdown.  Closing socket."));
- }
+void Client::catchError(QAbstractSocket::SocketError socketError)
+{
+    int error = socketError;
+    QString errorMessage = QString("ERROR %1 has occured. Please reference the documentation for specifics.").arg(error);
+    emit sendError(errorMessage);
+}
